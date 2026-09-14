@@ -1,0 +1,5 @@
+# Windows 脚本必须以 CRLF 签出：cmd.exe 无法正确解析 LF 行尾的 .bat/.cmd，
+# PowerShell 对 CRLF 也更稳妥。仓库内统一存 LF，签出时自动转 CRLF。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
