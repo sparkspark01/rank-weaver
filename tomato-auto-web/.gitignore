@@ -1,0 +1,3 @@
+# 运行时状态（含番茄 Cookie / Agent API Key，绝不上传）
+state/
+*.log

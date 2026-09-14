@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>番茄自动化控制台</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1><span class="logo">🍅</span>番茄自动化控制台</h1>
+      <div class="chips">
+        <button class="chip" id="chip-agent" title="配置 Agent API">🤖 Agent API：未配置</button>
+        <button class="chip" id="chip-tomato" title="配置番茄作家后台鉴权">🔑 番茄鉴权：未配置</button>
+        <span class="chip" id="chip-book" style="cursor:default">📖 目标小说：未选择</span>
+      </div>
+    </header>
+
+    <div id="conn-banner" class="banner err" hidden></div>
+
+    <!-- 新手引导步骤条：按正确顺序提示下一步该做什么 -->
+    <div class="steps" id="steps">
+      <span class="step" id="step-1"><span class="num">1</span>配置 Agent API</span>
+      <span class="arrow">→</span>
+      <span class="step" id="step-2"><span class="num">2</span>番茄鉴权并选书</span>
+      <span class="arrow">→</span>
+      <span class="step" id="step-3"><span class="num">3</span>推荐选题 / 生成大纲</span>
+      <span class="arrow">→</span>
+      <span class="step" id="step-4"><span class="num">4</span>确认大纲</span>
+      <span class="arrow">→</span>
+      <span class="step" id="step-5"><span class="num">5</span>生成章节并确认</span>
+      <span class="arrow">→</span>
+      <span class="step" id="step-6"><span class="num">6</span>创建定时发布计划</span>
+    </div>
+
+    <div class="grid">
+      <!-- 推荐 -->
+      <section class="card wide" id="card-recommend">
+        <h2>推荐功能 <span class="tag">fenxi skill</span></h2>
+        <p class="hint">抓取番茄小说连载中热门榜前二十，执行 fenxi 技能生成「热门题材分析 + 新书指南」，供开书选题参考。</p>
+        <div class="row">
+          <button id="btn-recommend">📊 生成热门题材分析与新书指南</button>
+          <span id="recommend-status" class="muted small"></span>
+        </div>
+        <div id="recommend-progress" class="progress" hidden><div></div></div>
+        <div id="recommend-report" class="report" hidden></div>
+      </section>
+
+      <!-- 生成 -->
+      <section class="card wide" id="card-outline">
+        <h2>生成功能 <span class="tag">fenxi skill</span></h2>
+        <p class="hint">输入你的小说剧情（梗概 / 设定 / 开篇构思），对照热门题材榜单做匹配评估：匹配则生成原创大纲，不匹配则给出疑问清单。</p>
+        <textarea id="plot-input" rows="4" placeholder="例如：都市异能，主角觉醒了只能给别人加状态的辅助系能力，本以为是废技能，却发现奶量能毒翻敌人……"></textarea>
+        <div class="row">
+          <button id="btn-outline">📝 评估剧情并生成大纲</button>
+          <span id="outline-status" class="muted small"></span>
+        </div>
+        <div id="outline-progress" class="progress" hidden><div></div></div>
+        <div id="outline-result" hidden>
+          <div class="banner info" id="outline-match"></div>
+          <div id="outline-questions" class="report" hidden></div>
+          <div id="outline-body" class="report" hidden></div>
+          <div class="row">
+            <button id="btn-outline-confirm" disabled>✅ 确认这份大纲</button>
+            <button id="btn-outline-reset" class="danger">清空重来</button>
+            <span id="outline-confirmed" class="muted small"></span>
+          </div>
+        </div>
+        <div id="outline-confirmed-banner" class="banner ok" hidden>✅ 大纲已确认，可前往「定时发布」生成章节并创建发布计划</div>
+      </section>
+
+      <!-- 定时发布 -->
+      <section class="card wide" id="card-publish">
+        <h2>定时发布功能 <span class="tag">du-nai + dsh-cron + tomato-writer-mcp</span></h2>
+        <p class="hint">确认大纲后：选择每天发布时间与每天章数 → du-nai 生成章节并确认 → 写入 dsh-cron 计划，由 DSH Automation 每天定时触发，经 tomato-writer-mcp 发布到番茄小说。</p>
+
+        <div class="banner info" id="publish-gate">请先在「生成」卡片确认大纲，并在「番茄鉴权」弹窗里选择目标小说。</div>
+
+        <div class="row">
+          <label>每天发布时刻</label>
+          <input type="time" id="plan-time" value="18:00" />
+          <label>每天章数</label>
+          <input type="number" id="plan-count" value="1" min="1" max="20" />
+          <label>时区</label>
+          <input type="text" id="plan-tz" style="width:160px" />
+          <button id="btn-plan-create">🕐 创建发布计划</button>
+          <button id="btn-plan-cancel" class="secondary" disabled>取消计划</button>
+        </div>
+        <div id="plan-status" class="banner" hidden></div>
+
+        <div class="divider"></div>
+        <div class="row">
+          <label>生成章节数</label>
+          <input type="number" id="gen-count" value="1" min="1" max="5" style="width:70px" />
+          <button id="btn-generate">✍️ 用 du-nai 生成章节</button>
+          <button id="btn-confirm-all" class="secondary">全部确认</button>
+          <button id="btn-publish-now" class="secondary">🚀 立即发布已确认章节</button>
+          <span id="chapter-status" class="muted small"></span>
+        </div>
+        <div id="chapter-progress" class="progress" hidden><div></div></div>
+        <div style="overflow:auto">
+          <table class="table" id="chapter-table">
+            <thead><tr><th>章节</th><th>标题</th><th>状态</th><th>字数</th><th>操作</th></tr></thead>
+            <tbody id="chapter-tbody"></tbody>
+          </table>
+        </div>
+        <p class="hint small" id="chapter-empty">还没有章节。点击「用 du-nai 生成章节」，生成后在弹窗中查看并确认。</p>
+      </section>
+
+      <!-- 日志 -->
+      <section class="card wide">
+        <h2>运行日志</h2>
+        <div id="log"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Agent API 弹窗（默认 display:none，仅 .open 显示） -->
+  <div class="modal-mask" id="modal-agent">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3>🤖 配置 Agent API</h3>
+          <span class="step-tip">第 1 步 / 共 6 步 · 先配这个，后面所有生成都靠它</span>
+        </div>
+        <button class="close" data-close="modal-agent">✕</button>
+      </div>
+      <p class="hint">网页的 fenxi / du-nai 能力由一个「Agent API」执行：任意 OpenAI 兼容的 /chat/completions 接口（如 DeepSeek API：<code>https://api.deepseek.com</code>）。API Key 只保存在本机 state 目录。</p>
+      <div class="field">
+        <label>接口地址 baseUrl（可带 /v1）</label>
+        <input type="text" id="agent-base" placeholder="https://api.deepseek.com" />
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="password" id="agent-key" placeholder="sk-..." />
+      </div>
+      <div class="field">
+        <label>模型</label>
+        <input type="text" id="agent-model" placeholder="deepseek-chat" />
+      </div>
+      <div class="row">
+        <button id="btn-agent-save">测试并保存</button>
+        <button id="btn-agent-clear" class="danger">清除配置</button>
+      </div>
+      <div id="agent-feedback" class="banner" hidden></div>
+    </div>
+  </div>
+
+  <!-- 番茄鉴权弹窗 -->
+  <div class="modal-mask" id="modal-tomato">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3>🔑 番茄作家后台鉴权</h3>
+          <span class="step-tip">第 2 步 / 共 6 步 · 配置后选择要发布的小说</span>
+        </div>
+        <button class="close" data-close="modal-tomato">✕</button>
+      </div>
+      <p class="hint">浏览器登录 <code>fanqienovel.com</code> 作家后台 → F12 → Network → 任选一个 <code>/api/author/...</code> 请求 → 复制完整 <code>Cookie</code> 头和 <code>X-Secsdk-Csrf-Token</code> 头（会话级固定）。Cookie 约 1-2 个月失效，失效后重新填入即可。</p>
+      <div class="field">
+        <label>Cookie（完整请求头值）</label>
+        <textarea id="tomato-cookie" rows="3" placeholder="sessionid=...; passport_csrf_token=...; ..."></textarea>
+      </div>
+      <div class="field">
+        <label>X-Secsdk-Csrf-Token</label>
+        <input type="text" id="tomato-csrf" placeholder="会话级固定 token" />
+      </div>
+      <div class="row">
+        <button id="btn-tomato-save">验证并保存</button>
+      </div>
+      <div id="tomato-feedback" class="banner" hidden></div>
+      <div class="divider"></div>
+      <h3>📖 选择发布目标小说</h3>
+      <select id="book-select"><option value="">（保存鉴权后自动加载书单）</option></select>
+      <div class="row">
+        <button id="btn-book-select" class="secondary">选择此书</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 章节查看/编辑弹窗 -->
+  <div class="modal-mask" id="modal-chapter">
+    <div class="modal" style="max-width:860px">
+      <div class="modal-head">
+        <h3 id="chapter-modal-title">章节</h3>
+        <button class="close" data-close="modal-chapter">✕</button>
+      </div>
+      <div class="field">
+        <label>标题</label>
+        <input type="text" id="chapter-edit-title" />
+      </div>
+      <div class="field">
+        <label>正文（纯文本，空行分段；保存后需重新确认）</label>
+        <textarea id="chapter-edit-content" rows="18"></textarea>
+      </div>
+      <div class="row">
+        <button id="btn-chapter-save">保存修改</button>
+        <button id="btn-chapter-confirm-one" class="secondary">确认发布</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通用确认框（替代阻塞式 window.confirm） -->
+  <div class="modal-mask" id="modal-confirm">
+    <div class="modal" style="max-width:460px">
+      <h3 id="confirm-title">确认操作</h3>
+      <p class="hint" id="confirm-text"></p>
+      <div class="row">
+        <button id="confirm-ok">确定</button>
+        <button id="confirm-cancel" class="secondary">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轻提示容器（替代阻塞式 window.alert） -->
+  <div id="toasts"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
