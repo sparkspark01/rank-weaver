@@ -106,20 +106,29 @@ node server.mjs
 ```
 D:\RankWeaver
 ├── README.md                    ← 本文件（项目级说明）
+├── DISCLAIMER.md                ← 开源免责声明（使用前必读）
+├── .gitattributes               ← 行尾规则：Windows 脚本（.bat/.cmd/.ps1）强制 CRLF
 ├── tomato-auto-web/             ← RankWeaver 控制台（主体）
 │   ├── server.mjs               后端：路由 + 编排 + 看门狗
 │   ├── lib/                     后端模块（见上方架构图）
 │   ├── public/                  前端：index.html / app.js / style.css
 │   ├── skills/                  fenxi、du-nai 技能指令副本（随应用分发）
 │   ├── scripts/                 启动与自检脚本
-│   ├── state/                   运行时状态（含鉴权与 API Key，已 gitignore）
+│   ├── state/                   运行时状态（含鉴权与 API Key，已 gitignore，不进版本库）
 │   ├── 启动控制台.bat           双击启动
 │   └── README.md                控制台组件级文档（含前端约定）
 └── tomato-writer-mcp/           ← 番茄作家后台 MCP 服务端
     ├── src/                     源码（client / config / content / service / tools）
-    ├── dist/                    构建产物；控制台直接引用这里的模块
+    ├── dist/                    构建产物（**已收录进版本库**，27 个文件 / 约 46 KB）
     └── README.md                上游组件文档
 ```
+
+> **关于 `dist/`：clone 后无需构建即可运行。**
+> 编译产物被有意提交进版本库——控制台运行时由 `lib/tomato.mjs` 直接 `import` `dist/tomato/*.js`，
+> 因此拉取仓库后直接 `node server.mjs` 就能用，不需要 `pnpm install`，也不需要 `pnpm build`。
+> 只有需要**独立启动 MCP 服务端**（`node dist/index.js`，依赖 `@modelcontextprotocol/sdk`）时，
+> 才需要在该目录安装依赖并重新构建。若你不想提交构建产物，可按
+> `tomato-writer-mcp/.gitignore` 中的注释还原忽略规则，并执行 `git rm -r --cached tomato-writer-mcp/dist`。
 
 ---
 
@@ -241,12 +250,19 @@ node scripts/verify-ui.mjs <dom>   # 渲染后 DOM 验收：首屏弹窗数量�
 
 ---
 
+## 免责声明
+
+本项目是**非官方的技术学习与个人自动化研究项目**，与番茄小说及其关联公司不存在任何隶属、合作或授权关系。
+使用前请务必阅读 **[`DISCLAIMER.md`](DISCLAIMER.md)**：其中包含使用者义务、账号与内容风险、
+凭据与数据安全、第三方服务说明，以及无担保与责任限制条款。**不同意者请勿使用。**
+
 ## 相关文档
 
+- 使用风险与法律免责声明：`DISCLAIMER.md`
 - 控制台组件细节与前端约定：`tomato-auto-web/README.md`
 - 番茄作家后台接口封装与 MCP 工具：`tomato-writer-mcp/README.md`
 - dsh-cron 上游仓库：<https://github.com/cofy-x/dsh-cron>
 
 ## 许可证
 
-MIT
+MIT（若仓库根目录尚无 `LICENSE` 文件，请按 MIT 全文补充后再分发）
